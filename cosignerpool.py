@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Electrum - lightweight Bitcoin client
-# Copyright (C) 2015 THomas Voegtlin
+# Copyright (C) 2015 Thomas Voegtlin
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,61 +17,62 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
-import thread, sys, socket, os, re
-import urllib2
-import Queue
+import sys, socket
 import traceback
 import plyvel
-import json, ast
-import time
-import ConfigParser
+from configparser import ConfigParser
 
-config = ConfigParser.ConfigParser()
+config = ConfigParser()
 config.read("/etc/cosignerpool.conf")
-my_password = config.get('main','password')
-my_host = config.get('main','host')
-my_port = config.getint('main','port')
+my_password = config.get('main', 'password')
+my_host = config.get('main', 'host')
+my_port = config.getint('main', 'port')
 dbpath = config.get('main', 'dbpath')
 
 
 def run_server():
-    from SimpleXMLRPCServer import SimpleXMLRPCServer
+    from xmlrpc.server import SimpleXMLRPCServer
     server = SimpleXMLRPCServer((my_host, my_port), allow_none=True, logRequests=False)
     server.register_function(delete, 'delete')
     server.register_function(get, 'get')
     server.register_function(put, 'put')
     server.register_function(dump, 'dump')
-    server.register_function(lambda: setattr(server,'running', False), 'stop')
+    server.register_function(lambda: setattr(server, 'running', False), 'stop')
     server.running = True
     while server.running:
         try:
             server.handle_request()
         except BaseException as e:
             traceback.print_exc(file=sys.stdout)
-    print "server stopped"
+    print("server stopped")
+
 
 def get(key):
     o = db.get(key)
     if o:
-        print "get", key, len(o)
+        print("get", key, len(o))
     return o
 
+
 def put(key, value):
-    print "put", key, len(value)
+    print("put", key, len(value))
     db.put(key, value)
+
 
 def delete(key):
     db.delete(key)
 
+
 def dump():
     out = {}
     for key, value in db:
-        out[ key ]= value
+        out[key] = value
     return out
 
+
 def handle_command(cmd):
-    import xmlrpclib
-    server = xmlrpclib.ServerProxy('http://%s:%d'%(my_host, my_port), allow_none=True)
+    from xmlrpc.client import ServerProxy
+    server = ServerProxy('http://%s:%d' % (my_host, my_port), allow_none=True)
 
     try:
         if cmd == 'stop':
@@ -79,11 +80,12 @@ def handle_command(cmd):
         else:
             out = "unknown command"
     except socket.error:
-        print "Server not running"
+        print("Server not running")
         return 1
 
-    print out
+    print(out)
     return 0
+
 
 if __name__ == '__main__':
 
@@ -94,5 +96,3 @@ if __name__ == '__main__':
     db = plyvel.DB(dbpath, create_if_missing=True, compression=None)
     run_server()
     db.close()
-
-
