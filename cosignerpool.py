@@ -15,24 +15,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-
+import os
 import sys, socket
 import traceback
 import plyvel
-from configparser import ConfigParser
-
-config = ConfigParser()
-config.read("/etc/cosignerpool.conf")
-my_password = config.get('main', 'password')
-my_host = config.get('main', 'host')
-my_port = config.getint('main', 'port')
-dbpath = config.get('main', 'dbpath')
 
 
-def run_server():
+def run_server(host, port):
     from xmlrpc.server import SimpleXMLRPCServer
-    server = SimpleXMLRPCServer((my_host, my_port), allow_none=True, logRequests=False)
+    server = SimpleXMLRPCServer((host, port), allow_none=True, logRequests=False)
     server.register_function(delete, 'delete')
     server.register_function(get, 'get')
     server.register_function(put, 'put')
@@ -88,11 +79,18 @@ def handle_command(cmd):
 
 
 if __name__ == '__main__':
+    my_host = os.environ.get("LISTEN_HOST", "0.0.0.0")
+    my_port = os.environ.get("LISTEN_PORT", 80)
+    try:
+        dbpath = os.environ["DB_PATH"]
+    except KeyError as e:
+        print("Required variable {} not set".format(e))
+        sys.exit(1)
 
     if len(sys.argv) > 1:
         ret = handle_command(sys.argv[1])
         sys.exit(ret)
 
     db = plyvel.DB(dbpath, create_if_missing=True, compression=None)
-    run_server()
+    run_server(my_host, my_port)
     db.close()
