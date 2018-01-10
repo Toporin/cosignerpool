@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 import os
-import sys, socket
+import sys
 import traceback
 import plyvel
 
@@ -28,11 +28,13 @@ def run_server(host, port):
     server.register_function(get, 'get')
     server.register_function(put, 'put')
     server.register_function(dump, 'dump')
-    server.register_function(lambda: setattr(server, 'running', False), 'stop')
     server.running = True
     while server.running:
         try:
             server.handle_request()
+        except KeyboardInterrupt:
+            print("Shutting down server")
+            sys.exit(0)
         except BaseException as e:
             traceback.print_exc(file=sys.stdout)
     print("server stopped")
@@ -61,23 +63,6 @@ def dump():
     return out
 
 
-def handle_command(cmd):
-    from xmlrpc.client import ServerProxy
-    server = ServerProxy('http://%s:%d' % (my_host, my_port), allow_none=True)
-
-    try:
-        if cmd == 'stop':
-            out = server.stop()
-        else:
-            out = "unknown command"
-    except socket.error:
-        print("Server not running")
-        return 1
-
-    print(out)
-    return 0
-
-
 if __name__ == '__main__':
     my_host = os.environ.get("LISTEN_HOST", "0.0.0.0")
     my_port = os.environ.get("LISTEN_PORT", 80)
@@ -86,10 +71,6 @@ if __name__ == '__main__':
     except KeyError as e:
         print("Required variable {} not set".format(e))
         sys.exit(1)
-
-    if len(sys.argv) > 1:
-        ret = handle_command(sys.argv[1])
-        sys.exit(ret)
 
     db = plyvel.DB(dbpath, create_if_missing=True, compression=None)
     run_server(my_host, my_port)
