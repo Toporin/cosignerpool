@@ -27,7 +27,6 @@ def run_server(host, port):
     server.register_function(delete, 'delete')
     server.register_function(get, 'get')
     server.register_function(put, 'put')
-    server.register_function(dump, 'dump')
     server.running = True
     while server.running:
         try:
@@ -54,13 +53,6 @@ def put(key, value):
 
 def delete(key):
     db.delete(key)
-
-
-def dump():
-    out = {}
-    for key, value in db:
-        out[key] = value
-    return out
 
 
 if __name__ == '__main__':
