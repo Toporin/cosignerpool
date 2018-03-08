@@ -40,24 +40,24 @@ def run_server(host, port):
 
 
 def get(key):
-    o = db.get(key)
+    o = db.get(key.encode("utf8"))
     if o:
         print("get", key, len(o))
-    return o
+    return o.decode("utf8") if o else None
 
 
 def put(key, value):
     print("put", key, len(value))
-    db.put(key, value)
+    db.put(key.encode("utf8"), value.encode("utf8"))
 
 
 def delete(key):
-    db.delete(key)
+    db.delete(key.encode("utf8"))
 
 
 if __name__ == '__main__':
     my_host = os.environ.get("LISTEN_HOST", "0.0.0.0")
-    my_port = os.environ.get("LISTEN_PORT", 80)
+    my_port = int(os.environ.get("LISTEN_PORT", 80))
     try:
         dbpath = os.environ["DB_PATH"]
     except KeyError as e:
@@ -65,5 +65,6 @@ if __name__ == '__main__':
         sys.exit(1)
 
     db = plyvel.DB(dbpath, create_if_missing=True, compression=None)
+    print("Starting server...")
     run_server(my_host, my_port)
     db.close()
